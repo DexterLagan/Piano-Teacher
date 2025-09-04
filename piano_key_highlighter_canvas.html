@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piano Highlighter — Canvas (iPad‑friendly)</title>
+<style>
+  :root{
+    --bg:#fafafa; --panel:#fff; --border:#ddd; --text:#222;
+    --root:#ff7a2b; --member:#2b7cff; --ghost:#bdbdbd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  header{position:sticky;top:0;z-index:10;background:var(--panel);border-bottom:1px solid var(--border);padding:12px 14px}
+  h1{margin:0;font-size:18px}
+  .subtitle{font-size:12px;color:#666}
+  main{padding:14px}
+  .panel{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px;margin-bottom:10px}
+  label{font-size:12px;color:#444;margin-bottom:4px;display:block}
+  select,input{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;background:#fff;font:inherit}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  button{padding:9px 12px;border-radius:8px;border:1px solid #bbb;background:#fff;cursor:pointer}
+  button.primary{background:#2b7cff;border-color:transparent;color:#fff}
+  .wrap{border:1px solid var(--border);border-radius:12px;background:#fff;padding:10px;overflow:auto}
+  canvas{display:block;max-width:100%}
+  .legend{margin-left:auto;display:flex;gap:12px;font-size:12px;align-items:center}
+  .dot{width:14px;height:14px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎹 Piano Highlighter (Canvas)</h1>
+  <div class="subtitle">iPad‑friendly rendering. Click keys, Shift‑click to toggle.</div>
+</header>
+<main>
+  <section class="panel">
+    <div><label for="mode">What to show</label><select id="mode"><option value="scale">Scale</option><option value="chord">Chord</option><option value="custom">Custom</option></select></div>
+    <div><label for="root">Root</label><select id="root">
+      <option>C</option><option>C#</option><option>Db</option><option>D</option><option>D#</option><option>Eb</option>
+      <option>E</option><option>F</option><option>F#</option><option>Gb</option><option>G</option><option>G#</option>
+      <option>Ab</option><option>A</option><option>A#</option><option>Bb</option><option>B</option>
+    </select></div>
+    <div><label for="type">Type</label>
+      <select id="type">
+        <optgroup label="Scales">
+          <option value="major">Major (Ionian)</option>
+          <option value="nat_minor">Natural Minor (Aeolian)</option>
+          <option value="dorian">Dorian</option>
+          <option value="phrygian">Phrygian</option>
+          <option value="lydian">Lydian</option>
+          <option value="mixolydian">Mixolydian</option>
+          <option value="locrian">Locrian</option>
+          <option value="maj_pent">Major Pentatonic</option>
+          <option value="min_pent">Minor Pentatonic</option>
+          <option value="blues">Blues</option>
+          <option value="harm_minor">Harmonic Minor</option>
+          <option value="mel_minor">Melodic Minor</option>
+        </optgroup>
+        <optgroup label="Chords">
+          <option value="maj_triad">Major</option><option value="min_triad">Minor</option><option value="dim_triad">Diminished</option><option value="aug_triad">Augmented</option>
+          <option value="maj7">Maj7</option><option value="min7">m7</option><option value="dom7">7</option><option value="minMaj7">m(maj7)</option>
+          <option value="halfDim7">m7(b5)</option><option value="dim7">dim7</option><option value="sus2">sus2</option><option value="sus4">sus4</option>
+          <option value="add9">add9</option><option value="6">6</option><option value="m6">m6</option><option value="9">9</option><option value="m9">m9</option>
+        </optgroup>
+      </select>
+    </div>
+    <div><label for="range">Keyboard range</label>
+      <select id="range"><option value="C3-B6" selected>C3–B6 (4 octaves)</option><option value="C2-B5">C2–B5</option><option value="C4-B7">C4–B7</option></select>
+    </div>
+    <div><label for="labels">Note labels</label><select id="labels"><option value="none">None</option><option value="letter" selected>Letter</option><option value="letter_oct">Letter+Octave</option></select></div>
+    <div><label for="custom">Custom notes (C4,E4,G4,Bb4)</label><input id="custom" placeholder="When mode = Custom, type notes"></div>
+  </section>
+  <div class="row">
+    <button id="apply" class="primary">Apply</button>
+    <button id="clear">Clear</button>
+    <div class="legend">
+      <span><span class="dot" style="background:#ff7a2b;border:1px solid #0001"></span> Root</span>
+      <span><span class="dot" style="background:#2b7cff;border:1px solid #0001"></span> Member</span>
+      <span><span class="dot" style="background:#bdbdbd;border:1px solid #0001"></span> Ghost</span>
+    </div>
+  </div>
+  <div class="wrap">
+    <canvas id="pianoCanvas" width="1200" height="220"></canvas>
+  </div>
+</main>
+
+<script>
+(function(){
+  // ---- Theory helpers ----
+  const SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const FLAT  = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
+  const SCALES = {
+    major:[0,2,4,5,7,9,11], nat_minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10],
+    phrygian:[0,1,3,5,7,8,10], lydian:[0,2,4,6,7,9,11], mixolydian:[0,2,4,5,7,9,10],
+    locrian:[0,1,3,5,6,8,10], maj_pent:[0,2,4,7,9], min_pent:[0,3,5,7,10], blues:[0,3,5,6,7,10],
+    harm_minor:[0,2,3,5,7,8,11], mel_minor:[0,2,3,5,7,9,11],
+  };
+  const CHORDS = {
+    maj_triad:[0,4,7], min_triad:[0,3,7], dim_triad:[0,3,6], aug_triad:[0,4,8],
+    maj7:[0,4,7,11], min7:[0,3,7,10], dom7:[0,4,7,10], minMaj7:[0,3,7,11],
+    halfDim7:[0,3,6,10], dim7:[0,3,6,9], sus2:[0,2,7], sus4:[0,5,7],
+    add9:[0,4,7,14], "6":[0,4,7,9], m6:[0,3,7,9], "9":[0,4,7,10,14], m9:[0,3,7,10,14]
+  };
+  function parseNote(s){
+    const m = String(s).trim().match(/^([A-Ga-g])([#b]?)(\d+)?$/);
+    if(!m) return null;
+    const L = m[1].toUpperCase(), a=m[2]||"", o=m[3]!=null?parseInt(m[3],10):null;
+    const base = {C:0,D:2,E:4,F:5,G:7,A:9,B:11}[L];
+    let pc = base + (a==="#"?1:(a==="b"?-1:0));
+    pc = (pc+12)%12; return {pc,oct:o};
+  }
+  function pcFrom(s){ const p=parseNote(s); return p?p.pc:null; }
+  function pcName(pc, preferFlat){ return (preferFlat?FLAT:SHARP)[pc]; }
+  function isBlack(pc){ return [1,3,6,8,10].includes(pc); }
+  function midi(pc, oct){ return (oct+1)*12 + pc; }
+  function parseRange(r){
+    const [a,b]=r.split("-").map(parseNote);
+    if(!a||!b||a.oct==null||b.oct==null){ return {min:48,max:95}; }
+    return {min:midi(a.pc,a.oct), max:midi(b.pc,b.oct)};
+  }
+
+  // ---- Canvas keyboard ----
+  const canvas = document.getElementById("pianoCanvas");
+  const ctx = canvas.getContext("2d");
+  let keyRects = []; // {midi,x,y,w,h,pc,black}
+  let state = { range:"C3-B6", preferFlat:false, labels:"letter",
+                members:new Set(), rootPC:0 };
+
+  function build(){
+    keyRects = [];
+    const {min,max}=parseRange(state.range);
+    const whitePattern=[0,2,4,5,7,9,11];
+    // Count whites in range
+    let whiteCount=0;
+    for(let m=min;m<=max;m++){ if(!isBlack(m%12)) whiteCount++; }
+    const ww= Math.max(22, Math.floor(canvas.width/whiteCount));
+    const wh= 180, bh=Math.floor(wh*0.62), bw=Math.floor(ww*0.62);
+    let x=0; // draw whites
+    let whiteXByMidi={};
+    // background
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // Whites
+    for(let m=min;m<=max;m++){
+      const pc=m%12;
+      if(!isBlack(pc)){
+        ctx.fillStyle="#fff"; ctx.strokeStyle="#999";
+        ctx.lineWidth=1;
+        ctx.fillRect(x,0,ww-1,wh);
+        ctx.strokeRect(x,0,ww-1,wh);
+        keyRects.push({midi:m,x:x,y:0,w:ww-1,h:wh,pc,black:false});
+        // label
+        if(state.labels!=="none"){
+          const oct=Math.floor(m/12)-1;
+          const t = state.labels==="letter_oct" ? pcName(pc,state.preferFlat)+oct : pcName(pc,state.preferFlat);
+          ctx.fillStyle="#333"; ctx.font="10px system-ui, -apple-system, sans-serif";
+          ctx.textAlign="center"; ctx.fillText(t, x+(ww-1)/2, wh-6);
+        }
+        whiteXByMidi[m]=x;
+        x+=ww;
+      }
+    }
+    // Blacks
+    for(let m=min;m<=max;m++){
+      const pc=m%12; if(!isBlack(pc)) continue;
+      const prevX=whiteXByMidi[m-1], nextX=whiteXByMidi[m+1];
+      if(prevX===undefined||nextX===undefined) continue;
+      const bx = prevX + (nextX-prevX)*0.64 - bw/2;
+      ctx.fillStyle="#111"; ctx.strokeStyle="#000"; ctx.lineWidth=1;
+      ctx.fillRect(bx,0,bw,bh);
+      ctx.strokeRect(bx,0,bw,bh);
+      keyRects.push({midi:m,x:bx,y:0,w:bw,h:bh,pc,black:true});
+      // label
+      if(state.labels!=="none"){
+        const oct=Math.floor(m/12)-1;
+        const t = state.labels==="letter_oct" ? pcName(pc,state.preferFlat)+oct : pcName(pc,state.preferFlat);
+        ctx.fillStyle="#fff"; ctx.font="9px system-ui, -apple-system, sans-serif"; ctx.textAlign="center";
+        ctx.fillText(t, bx+bw/2, bh-6);
+      }
+    }
+    color();
+  }
+
+  function color(){
+    // overlay highlight colors
+    const members = state.members;
+    // draw translucent overlays + ghosting
+    keyRects.forEach(k=>{
+      const isMember = members.has(k.pc);
+      if(isMember){
+        const isRoot = (k.pc===state.rootPC);
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = isRoot? "#ffe2cf" : "#dfeaff";
+        ctx.fillRect(k.x, k.y, k.w, k.h);
+        ctx.globalAlpha = 1.0;
+      }else{
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(k.x, k.y, k.w, k.h);
+        ctx.globalAlpha = 1.0;
+      }
+    });
+    // redraw borders to keep them crisp
+    keyRects.filter(k=>!k.black).forEach(k=>{ ctx.strokeStyle="#999"; ctx.strokeRect(k.x,k.y,k.w,k.h); });
+    keyRects.filter(k=>k.black).forEach(k=>{ ctx.strokeStyle="#000"; ctx.strokeRect(k.x,k.y,k.w,k.h); });
+  }
+
+  function applyFromUI(){
+    const mode=document.getElementById("mode").value;
+    const root=document.getElementById("root").value;
+    const type=document.getElementById("type").value;
+    const range=document.getElementById("range").value;
+    const labels=document.getElementById("labels").value;
+    const custom=document.getElementById("custom").value;
+    state.range=range; state.labels=labels;
+    state.preferFlat = /b/.test(root) && !root.includes("#");
+    state.rootPC = pcFrom(root) ?? 0;
+    let pcs=new Set();
+    if(mode==="scale"){
+      const ivs=SCALES[type]||SCALES.major; pcs=new Set(ivs.map(i=>(state.rootPC+i)%12));
+    }else if(mode==="chord"){
+      const ivs=CHORDS[type]||CHORDS.maj_triad; pcs=new Set(ivs.map(i=>(state.rootPC+i)%12));
+    }else{
+      const list=custom.split(",").map(s=>s.trim()).filter(Boolean);
+      pcs=new Set(list.map(pcFrom).filter(v=>v!=null));
+    }
+    state.members = pcs;
+    build();
+  }
+
+  // click hit-test
+  canvas.addEventListener("click", (ev)=>{
+    const rect=canvas.getBoundingClientRect();
+    const x= (ev.clientX-rect.left) * (canvas.width/rect.width);
+    const y= (ev.clientY-rect.top) * (canvas.height/rect.height);
+    // check black keys first (on top)
+    let hit = keyRects.filter(k=>k.black).find(k=> x>=k.x && x<=k.x+k.w && y>=k.y && y<=k.y+k.h);
+    if(!hit) hit = keyRects.filter(k=>!k.black).find(k=> x>=k.x && x<=k.x+k.w && y>=k.y && y<=k.y+k.h);
+    if(!hit) return;
+    if(ev.shiftKey){
+      // toggle membership of that pc
+      if(state.members.has(hit.pc)) state.members.delete(hit.pc); else state.members.add(hit.pc);
+      build();
+    }
+  });
+
+  // buttons
+  document.getElementById("apply").addEventListener("click", applyFromUI);
+  document.getElementById("clear").addEventListener("click", ()=>{ state.members=new Set(); build(); });
+
+  // initial
+  build();
+  applyFromUI();
+})();
+</script>
+</body>
+</html>
