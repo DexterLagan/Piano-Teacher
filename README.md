@@ -3,7 +3,16 @@
 An interactive SwiftUI/Canvas piano keyboard for learning scales, chords, and improvisation.  
 Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
 
-<img src="screenshots/screenshot.png" width="700"/>
+<img src="screenshots/screenshot.jpg" width="700"/>
+
+<img src="screenshots/screenshot2.jpg" width="700"/>
+Scale selection
+
+<img src="screenshots/screenshot3.jpg" width="700"/>
+Chord selection
+
+<img src="screenshots/screenshot4.jpg" width="700"/>
+Touch support and key recognition
 
 ## ✨ Features
 
