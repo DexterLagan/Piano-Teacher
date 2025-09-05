@@ -21,10 +21,10 @@ Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
 
 ## Features Showcase
 
-### Scale Selection
+### Chord Selection
 <img src="screenshots/screenshot2.jpg" width="700"/>
 
-### Chord Selection
+### Scale Selection
 <img src="screenshots/screenshot3.jpg" width="700"/>
 
 ### Note Detection (touch)
