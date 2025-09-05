@@ -61,6 +61,9 @@ final class PianoCGView: UIView {
     // C3 (48) … B6 (95)
     let minM = 48, maxM = 95
     
+    // Thingy to add support for key touches
+    var onTapPC: ((Int) -> Void)?
+    
     override class var layerClass: AnyClass { CATiledLayer.self }
     
     override func draw(_ rect: CGRect) {
@@ -89,8 +92,6 @@ final class PianoCGView: UIView {
         let labelLight  = UIColor.white.withAlphaComponent(0.95)
         let whiteLineW: CGFloat = 2.0
         let blackLineW: CGFloat = 2.2
-        
-
         
         // Background
         ctx.setFillColor(UIColor.systemGroupedBackground.cgColor)
@@ -212,6 +213,58 @@ final class PianoCGView: UIView {
             }
         }
     }
+    
+    private func pcAt(point p: CGPoint) -> Int? {
+        // Recompute the same geometry used for drawing
+        var whiteCount = 0
+        for m in minM...maxM { if !isBlackPC(m%12) { whiteCount += 1 } }
+        let ww = max(22, floor(bounds.width / CGFloat(whiteCount)))
+        let wh = bounds.height * 0.92
+        let bw = floor(ww * 0.58)
+        let bh = floor(wh * 0.62)
+        let whiteW = ww - 1
+        
+        // Build white positions
+        var x: CGFloat = 0
+        var whiteXByMidi: [Int:CGFloat] = [:]
+        for m in minM...maxM {
+            let pc = m % 12
+            if !isBlackPC(pc) {
+                whiteXByMidi[m] = x
+                x += ww
+            }
+        }
+        
+        // 1) Check BLACK keys first (they sit on top)
+        for m in minM...maxM {
+            let pc = m % 12
+            guard isBlackPC(pc),
+                  let prevX = whiteXByMidi[m - 1],
+                  let nextX = whiteXByMidi[m + 1] else { continue }
+            let prevCenter = prevX + whiteW/2
+            let nextCenter = nextX + whiteW/2
+            let bx = (prevCenter + nextCenter)/2 - bw/2
+            let r = CGRect(x: bx, y: 0, width: bw, height: bh)
+            if r.contains(p) { return pc }
+        }
+        
+        // 2) Then WHITES
+        for m in minM...maxM {
+            let pc = m % 12
+            if !isBlackPC(pc), let wx = whiteXByMidi[m] {
+                let r = CGRect(x: wx, y: 0, width: whiteW, height: wh)
+                if r.contains(p) { return pc }
+            }
+        }
+        return nil
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let p = touches.first?.location(in: self),
+              let pc = pcAt(point: p) else { return }
+        onTapPC?(pc)
+    }
+    
 }
 
 // SwiftUI wrapper
@@ -220,9 +273,14 @@ struct PianoCGViewRepresentable: UIViewRepresentable {
     @Binding var preferFlats: Bool
     @Binding var rootPC: Int
     @Binding var members: Set<Int>
+    var onTapPC: (Int) -> Void = { _ in }   // NEW
+    
     func makeUIView(context: Context) -> PianoCGView {
         let v = PianoCGView()
+        v.isOpaque = true
         v.backgroundColor = .systemGroupedBackground
+        v.contentScaleFactor = UIScreen.main.scale
+        v.onTapPC = onTapPC                 // NEW
         return v
     }
     func updateUIView(_ uiView: PianoCGView, context: Context) {
@@ -230,6 +288,7 @@ struct PianoCGViewRepresentable: UIViewRepresentable {
         uiView.preferFlats = preferFlats
         uiView.rootPC = rootPC
         uiView.members = members
+        uiView.onTapPC = onTapPC            // keep it updated
     }
 }
 
@@ -259,7 +318,65 @@ final class PianoVM: ObservableObject {
             members = Set(pcs)
         }
         preferFlats = root.contains("b") && !root.contains("#")
+        updateReadout()
     }
+    
+    @Published var noteListText: String = ""
+    @Published var chordGuessText: String = ""
+    
+    // Toggle from taps (switch to Custom automatically)
+    func toggleFromTap(pc: Int) {
+        if mode != .custom { mode = .custom }
+        if members.contains(pc) { members.remove(pc) } else { members.insert(pc) }
+        updateReadout()
+    }
+    
+    // Rebuild the text readout (note names and a chord guess)
+    func updateReadout() {
+        // Notes (prefer flats if root is written as flat)
+        let preferFlatsNow = root.contains("b") && !root.contains("#")
+        let names = members.sorted().map { pcName($0, preferFlat: preferFlatsNow) }
+        noteListText = names.joined(separator: ", ")
+        
+        // Chord detection (simple triad/7th templates, inversion-agnostic)
+        chordGuessText = guessChord(pcs: members, preferFlats: preferFlatsNow) ?? "—"
+    }
+    
+    // Very simple chord guesser (triads + sevenths). Returns e.g. "C#m7" or "Fmaj7".
+    func guessChord(pcs: Set<Int>, preferFlats: Bool) -> String? {
+        if pcs.isEmpty { return nil }
+        // Normalize: for each possible root, compute intervals mod 12 and check known shapes
+        let triads: [(name: String, ivs:Set<Int>)] = [
+            ("maj", [0,4,7]), ("min", [0,3,7]), ("dim", [0,3,6]), ("aug", [0,4,8])
+        ]
+        let sevenths: [(name: String, ivs:Set<Int>)] = [
+            ("maj7", [0,4,7,11]), ("7", [0,4,7,10]), ("m7", [0,3,7,10]),
+            ("mMaj7", [0,3,7,11]), ("m7b5", [0,3,6,10]), ("dim7", [0,3,6,9])
+        ]
+        for root in 0..<12 {
+            let rel = Set(pcs.map { ($0 - root + 12) % 12 })
+            if rel.count == 3 {
+                if let m = triads.first(where: { $0.ivs == rel }) {
+                    return "\(pcName(root, preferFlat: preferFlats))" + (m.name == "maj" ? "" : (m.name == "min" ? "m" : m.name))
+                }
+            } else if rel.count == 4 {
+                if let m = sevenths.first(where: { $0.ivs == rel }) {
+                    // nicer printing for a few cases
+                    switch m.name {
+                    case "7": return "\(pcName(root, preferFlat: preferFlats))7"
+                    case "maj7": return "\(pcName(root, preferFlat: preferFlats))maj7"
+                    case "m7": return "\(pcName(root, preferFlat: preferFlats))m7"
+                    case "mMaj7": return "\(pcName(root, preferFlat: preferFlats))m(maj7)"
+                    case "m7b5": return "\(pcName(root, preferFlat: preferFlats))m7♭5"
+                    case "dim7": return "\(pcName(root, preferFlat: preferFlats))dim7"
+                    default: return "\(pcName(root, preferFlat: preferFlats))" + m.name
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
 }
 
 // ---------- Minimal SwiftUI UI (tiny, fast) ----------
@@ -301,7 +418,7 @@ struct ContentView: View {
                     .autocorrectionDisabled()
                     .textFieldStyle(.roundedBorder)
             }
-            // Legend
+            // Legend (unchanged)
             HStack(spacing: 14) {
                 Circle().fill(Color.blue).frame(width: 12, height: 12)
                 Text("Highlighted notes").font(.footnote)
@@ -311,11 +428,22 @@ struct ContentView: View {
             }
             .opacity(0.9)
             
-            // Keyboard view
+            // Readout (NEW)
+            HStack {
+                Text("Notes: ").font(.footnote).foregroundStyle(.secondary)
+                Text(vm.noteListText.isEmpty ? "—" : vm.noteListText).font(.footnote)
+                Spacer()
+                Text("Chord: ").font(.footnote).foregroundStyle(.secondary)
+                Text(vm.chordGuessText).font(.footnote).bold()
+            }
+            .padding(.bottom, 4)
+            
+            // Keyboard view (pass onTapPC)
             PianoCGViewRepresentable(showLabels: $vm.showLabels,
                                      preferFlats: $vm.preferFlats,
                                      rootPC: .init(get: { vm.rootPC }, set: { _ in }),
-                                     members: $vm.members)
+                                     members: $vm.members,
+                                     onTapPC: { pc in vm.toggleFromTap(pc: pc) })   // ← NEW
             .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.3)))
