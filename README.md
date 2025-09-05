@@ -19,7 +19,7 @@ Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
 - **SwiftUI wrapper + UIKit drawing** for efficient rendering  
 - **MIT licensed** (see below)
 
-## 📱 Getting Started with Swift Playgrounds (straight on your iPhone or iPad!)
+## 📱 Getting Started with Swift Playgrounds (on your iPhone or iPad)
 
 1. Create a new **App** project in Swift Playgrounds.  
 2. Delete the default `ContentView.swift` contents.  
