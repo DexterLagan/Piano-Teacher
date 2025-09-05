@@ -1,7 +1,7 @@
 # 🎹 Piano Teacher
 
 An interactive SwiftUI/Canvas piano keyboard for learning scales, chords, and improvisation.  
-Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
+Built for macOS/iOS via **Xcode** or **Swift Playgrounds** straight on your iPhone or iPad.
 
 <p align="center">
   <img src="screenshots/screenshot.jpg" width="700" alt="Piano Teacher – Hero Screenshot"/>
@@ -38,7 +38,15 @@ Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
   <img src="screenshots/screenshot4.jpg" width="420" alt="Note Detection"/>
 </p>
 
-## 📱 Getting Started with Swift Playgrounds (on your iPhone or iPad)
+## 💻 Compiling with Xcode (macOS)
+
+1. Open **Xcode** and create a new **iOS App** project.  
+2. Delete the auto-generated `ContentView.swift` file.  
+3. Add a new Swift file called `ContentView.swift` and paste in the code.  
+4. Make sure your `App` struct (e.g. `MyAppApp.swift`) still loads `ContentView()`.  
+5. Build and run in the Simulator or on a connected device.
+
+## 📱 Running with Swift Playgrounds (iPhone or iPad)
 
 1. Create a new **App** project in Swift Playgrounds.  
 2. Delete the default `ContentView.swift` contents.  
@@ -49,14 +57,6 @@ Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
 Tips:
 - Use the segmented control to switch between **Scale**, **Chord**, and **Custom** modes.  
 - In Custom mode, tap keys to toggle them and see the note list update.  
-
-## 💻 Compiling with Xcode (macOS)
-
-1. Open **Xcode** and create a new **iOS App** project.  
-2. Delete the auto-generated `ContentView.swift` file.  
-3. Add a new Swift file called `ContentView.swift` and paste in the code.  
-4. Make sure your `App` struct (e.g. `MyAppApp.swift`) still loads `ContentView()`.  
-5. Build and run in the Simulator or on a connected device.
 
 ## 📄 License
 
