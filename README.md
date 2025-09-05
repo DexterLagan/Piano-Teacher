@@ -3,7 +3,9 @@
 An interactive SwiftUI/Canvas piano keyboard for learning scales, chords, and improvisation.  
 Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
 
-<img src="screenshots/screenshot.jpg" width="700"/>
+<p align="center">
+  <img src="screenshots/screenshot.jpg" width="700" alt="Piano Teacher – Hero Screenshot"/>
+</p>
 
 ## ✨ Features
 
@@ -19,16 +21,22 @@ Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
 - **SwiftUI wrapper + UIKit drawing** for efficient rendering  
 - **MIT licensed** (see below)
 
-## Features Showcase
+## 📸 Features Showcase
 
 ### Chord Selection
-<img src="screenshots/screenshot2.jpg" width="700"/>
+<p align="center">
+  <img src="screenshots/screenshot2.jpg" width="420" alt="Chord Selection"/>
+</p>
 
 ### Scale Selection
-<img src="screenshots/screenshot3.jpg" width="700"/>
+<p align="center">
+  <img src="screenshots/screenshot3.jpg" width="420" alt="Scale Selection"/>
+</p>
 
 ### Note Detection (touch)
-<img src="screenshots/screenshot4.jpg" width="700"/>
+<p align="center">
+  <img src="screenshots/screenshot4.jpg" width="420" alt="Note Detection"/>
+</p>
 
 ## 📱 Getting Started with Swift Playgrounds (on your iPhone or iPad)
 
