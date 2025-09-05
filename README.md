@@ -5,15 +5,6 @@ Built for iPad **Swift Playgrounds** or macOS/iOS via **Xcode**.
 
 <img src="screenshots/screenshot.jpg" width="700"/>
 
-<img src="screenshots/screenshot2.jpg" width="700"/>
-Scale selection
-
-<img src="screenshots/screenshot3.jpg" width="700"/>
-Chord selection
-
-<img src="screenshots/screenshot4.jpg" width="700"/>
-Touch support and key recognition
-
 ## ✨ Features
 
 - **4-octave keyboard (C3–B6)** with centered black keys  
@@ -27,6 +18,17 @@ Touch support and key recognition
 - **Dark & light mode** compatible  
 - **SwiftUI wrapper + UIKit drawing** for efficient rendering  
 - **MIT licensed** (see below)
+
+## Features Showcase
+
+### Scale Selection
+<img src="screenshots/screenshot2.jpg" width="700"/>
+
+### Chord Selection
+<img src="screenshots/screenshot3.jpg" width="700"/>
+
+### Note Detection (touch)
+<img src="screenshots/screenshot4.jpg" width="700"/>
 
 ## 📱 Getting Started with Swift Playgrounds (on your iPhone or iPad)
 
